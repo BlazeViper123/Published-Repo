@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Evolution: God Mode</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #0f172a; font-family: 'Courier New', monospace; transition: background-color 0.5s; }
+        canvas { display: block; }
+        #ui-layer {
+            position: absolute; top: 20px; left: 20px; color: white; font-size: 20px;
+            pointer-events: none; background: rgba(0, 0, 0, 0.7); padding: 15px; 
+            border-radius: 5px; border-left: 5px solid #38bdf8; z-index: 5;
+        }
+        .overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: #0f172a; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 10;
+        }
+        button {
+            padding: 15px 60px; font-size: 20px; background: #38bdf8; color: #0f172a;
+            border: none; border-radius: 5px; cursor: pointer; font-weight: bold;
+        }
+        #restart-btn { display: none; z-index: 11; position: absolute; top: 60%; left: 50%; transform: translate(-50%, -50%); background: #ff0044; color: white; }
+    </style>
+</head>
+<body>
+
+    <div id="ui-layer">
+        DODGED: <span id="score">0</span><br>
+        BEST: <span id="high-score">0</span><br>
+        <span id="rank" style="font-size: 14px; color: #38bdf8;">RANK: PEACEFUL</span>
+    </div>
+    
+    <div id="start-overlay" class="overlay">
+        <h1 style="color: white; letter-spacing: 10px;">EVOLUTION</h1>
+        <p style="color: #64748b; margin-bottom: 20px;">A & D TO MOVE</p>
+        <button id="start-btn">START MATCH</button>
+    </div>
+
+    <button id="restart-btn">RESTART MATCH</button>
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreElement = document.getElementById('score');
+        const highScoreElement = document.getElementById('high-score');
+        const rankElement = document.getElementById('rank');
+        const restartBtn = document.getElementById('restart-btn');
+        const startOverlay = document.getElementById('start-overlay');
+
+        let score = 0, highScore = localStorage.getItem('dodgeHighScore') || 0, gameOver = true, balls = [], shake = 0;
+        const player = { x: 0, y: 0, width: 40, height: 40, color: '#38bdf8', speed: 10, dx: 0 };
+        const keys = { a: false, d: false };
+        highScoreElement.innerText = highScore;
+
+        // --- DYNAMIC AUDIO SYSTEM ---
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        function playNote(freq, type, duration, volume) {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            gain.gain.setValueAtTime(volume, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + duration);
+        }
+
+        function musicLoop() {
+            if (gameOver) return;
+            let tempo = 500;
+
+            if (score < 15) { // PEACEFUL
+                playNote(329.63 + (Math.random() * 100), 'sine', 1.2, 0.08);
+                tempo = 600;
+            } else if (score < 30) { // HARD
+                playNote(110, 'sawtooth', 0.2, 0.1);
+                tempo = 300;
+            } else if (score < 50) { // HARDER
+                playNote(80, 'square', 0.15, 0.15);
+                playNote(Math.random() * 400 + 100, 'sawtooth', 0.1, 0.05);
+                tempo = 200;
+            } else if (score < 100) { // EXTREME
+                playNote(60, 'sawtooth', 0.1, 0.2);
+                playNote(Math.random() * 1000, 'square', 0.05, 0.07);
+                tempo = 120;
+            } else { // GOD MODE (100+)
+                playNote(40 + Math.random() * 20, 'sawtooth', 0.05, 0.3);
+                playNote(2000, 'square', 0.02, 0.05);
+                tempo = 80; // Super fast
+            }
+
+            setTimeout(musicLoop, tempo);
+        }
+
+        function init() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            player.x = canvas.width / 2 - 20;
+            player.y = canvas.height - 100;
+            score = 0;
+            balls = [];
+            gameOver = false;
+            scoreElement.innerText = score;
+            restartBtn.style.display = 'none';
+            startOverlay.style.display = 'none';
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            musicLoop();
+            animate();
+        }
+
+        window.addEventListener('keydown', (e) => { if (e.key === 'a') keys.a = true; if (e.key === 'd') keys.d = true; });
+        window.addEventListener('keyup', (e) => { if (e.key === 'a') keys.a = false; if (e.key === 'd') keys.d = false; });
+
+        class Ball {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = -30;
+                if (score < 15) { this.speed = 4; this.color = '#38bdf8'; this.radius = 10; }
+                else if (score < 30) { this.speed = 7; this.color = '#fbbf24'; this.radius = 12; }
+                else if (score < 50) { this.speed = 10; this.color = '#ef4444'; this.radius = 15; }
+                else if (score < 100) { this.speed = 14; this.color = '#ffffff'; this.radius = 18; }
+                else { this.speed = 18; this.color = '#ffff00'; this.radius = 20; }
+            }
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                if(score >= 50) { ctx.shadowBlur = 20; ctx.shadowColor = this.color; }
+                ctx.fill();
+            }
+            update() {
+                this.y += this.speed;
+                if (this.y > canvas.height + 25) {
+                    score++;
+                    scoreElement.innerText = score;
+                    if (score > highScore) {
+                        highScore = score;
+                        highScoreElement.innerText = highScore;
+                        localStorage.setItem('dodgeHighScore', highScore);
+                    }
+                    return false;
+                }
+                let dx = this.x - (player.x + 20);
+                let dy = this.y - (player.y + 20);
+                if (Math.sqrt(dx*dx + dy*dy) < this.radius + 18) endGame();
+                return true;
+            }
+        }
+
+        function endGame() {
+            gameOver = true;
+            restartBtn.style.display = 'block';
+            playNote(30, 'sawtooth', 2, 0.5);
+        }
+
+        function animate() {
+            if (gameOver) return;
+
+            // Flash Logic for 100+
+            if (score >= 100) {
+                const frames = ["#4a4a00", "#ffffff", "#000000"];
+                document.body.style.backgroundColor = frames[Math.floor(Date.now() / 50) % 3];
+                shake = 8;
+            } else if (score >= 50) {
+                document.body.style.backgroundColor = "#000000";
+                rankElement.innerText = "RANK: EXTREME";
+                rankElement.style.color = "#ff0044";
+            } else if (score >= 30) {
+                document.body.style.backgroundColor = "#7f1d1d";
+                rankElement.innerText = "RANK: CHAOTIC";
+            } else if (score >= 15) {
+                document.body.style.backgroundColor = "#450a0a";
+                rankElement.innerText = "RANK: UNSETTLED";
+            }
+
+            ctx.save();
+            if (shake > 0) {
+                ctx.translate(Math.random() * shake - shake/2, Math.random() * shake - shake/2);
+                if (score < 100) shake *= 0.9; 
+            }
+
+            ctx.fillStyle = 'rgba(0,0,0,0.3)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            if (keys.a) player.dx = -player.speed;
+            else if (keys.d) player.dx = player.speed;
+            else player.dx *= 0.85;
+            player.x = Math.max(0, Math.min(canvas.width - 40, player.x + player.dx));
+
+            ctx.fillStyle = (score >= 100) ? `hsl(${Date.now() % 360}, 100%, 50%)` : player.color;
+            ctx.fillRect(player.x, player.y, player.width, player.height);
+
+            let spawnRate = (score < 15) ? 0.04 : (score < 30) ? 0.08 : (score < 50) ? 0.14 : 0.25;
+            if (Math.random() < spawnRate) balls.push(new Ball());
+            balls = balls.filter(ball => { ball.draw(); return ball.update(); });
+
+            ctx.restore();
+            requestAnimationFrame(animate);
+        }
+
+        document.getElementById('start-btn').addEventListener('click', init);
+        restartBtn.addEventListener('click', init);
+    </script>
+</body>
+</html>
