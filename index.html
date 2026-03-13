@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>CYBER ARCADE</title>
+
+<style>
+body{
+margin:0;
+height:100vh;
+display:flex;
+justify-content:center;
+align-items:center;
+background:black;
+font-family:Courier New, monospace;
+overflow:hidden;
+color:#0ff;
+}
+
+/* moving cyber grid */
+body::before{
+content:"";
+position:absolute;
+width:200%;
+height:200%;
+background:
+linear-gradient(#0ff22 1px, transparent 1px),
+linear-gradient(90deg,#0ff22 1px, transparent 1px);
+background-size:60px 60px;
+transform:rotateX(60deg);
+animation:gridMove 10s linear infinite;
+}
+
+@keyframes gridMove{
+0%{transform:translateY(0) rotateX(60deg);}
+100%{transform:translateY(60px) rotateX(60deg);}
+}
+
+.container{
+position:relative;
+text-align:center;
+z-index:2;
+}
+
+h1{
+font-size:60px;
+letter-spacing:8px;
+text-shadow:0 0 10px #0ff,0 0 40px #0ff;
+margin-bottom:50px;
+}
+
+.menu{
+display:flex;
+flex-direction:column;
+gap:25px;
+}
+
+button{
+font-size:22px;
+padding:20px 60px;
+background:black;
+border:2px solid #0ff;
+color:#0ff;
+cursor:pointer;
+transition:0.3s;
+box-shadow:0 0 10px #0ff;
+}
+
+button:hover{
+color:#f0f;
+border-color:#f0f;
+box-shadow:0 0 20px #f0f,0 0 40px #f0f;
+transform:scale(1.05);
+}
+
+.footer{
+margin-top:40px;
+font-size:12px;
+opacity:0.6;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>CYBER ARCADE</h1>
+
+<div class="menu">
+
+<button onclick="location.href='dodge.html'">
+▶ PLAY EVOLUTION
+</button>
+
+<button onclick="location.href='neon_drift.html'">
+▶ PLAY NEON DRIFT
+</button>
+
+</div>
+
+<div class="footer">
+SYSTEM READY // SELECT PROGRAM
+</div>
+
+</div>
+
+</body>
+</html>
