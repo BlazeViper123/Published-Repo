@@ -6,7 +6,10 @@
     <title>The Evolution: God Mode</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #0f172a; font-family: 'Courier New', monospace; transition: background-color 0.5s; }
-        canvas { display: block; }
+        canvas { 
+    display: block;
+    touch-action: none;
+}
         #ui-layer {
             position: absolute; top: 20px; left: 20px; color: white; font-size: 20px;
             pointer-events: none; background: rgba(0, 0, 0, 0.7); padding: 15px; 
@@ -113,9 +116,39 @@
             animate();
         }
 
-        window.addEventListener('keydown', (e) => { if (e.key === 'a') keys.a = true; if (e.key === 'd') keys.d = true; });
-        window.addEventListener('keyup', (e) => { if (e.key === 'a') keys.a = false; if (e.key === 'd') keys.d = false; });
+// KEYBOARD CONTROLS
+window.addEventListener('keydown', (e) => {
+    if (e.key === 'a') keys.a = true;
+    if (e.key === 'd') keys.d = true;
+});
 
+window.addEventListener('keyup', (e) => {
+    if (e.key === 'a') keys.a = false;
+    if (e.key === 'd') keys.d = false;
+});
+
+
+// TOUCH CONTROLS (FOR PHONES / TABLETS)
+window.addEventListener('touchstart', handleTouch);
+window.addEventListener('touchmove', handleTouch);
+
+window.addEventListener('touchend', () => {
+    keys.a = false;
+    keys.d = false;
+});
+
+function handleTouch(e) {
+    const touch = e.touches[0];
+    const x = touch.clientX;
+
+    if (x < window.innerWidth / 2) {
+        keys.a = true;
+        keys.d = false;
+    } else {
+        keys.d = true;
+        keys.a = false;
+    }
+}
         class Ball {
             constructor() {
                 this.x = Math.random() * canvas.width;
