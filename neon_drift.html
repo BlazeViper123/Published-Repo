@@ -4,7 +4,10 @@
     <title>NEON DRIFT // VECTOR</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', Courier, monospace; }
-        canvas { display: block; }
+        canvas { 
+    display: block;
+    touch-action: none;
+}
         #overlay {
             position: absolute; top: 20px; left: 20px; color: #0ff;
             text-shadow: 0 0 10px #0ff; pointer-events: none;
@@ -55,6 +58,13 @@ const state = {
     keys: {}
 };
 
+// TOUCH CONTROL STATE
+state.touch = {
+    left:false,
+    right:false,
+    thrust:false
+};
+
 class Player {
     constructor() {
         this.x = w/2; this.y = h/2;
@@ -66,10 +76,10 @@ class Player {
     }
 
     update() {
-        if(state.keys['ArrowLeft'] || state.keys['KeyA']) this.angle -= 0.08;
-        if(state.keys['ArrowRight'] || state.keys['KeyD']) this.angle += 0.08;
+        if(state.keys['ArrowLeft'] || state.keys['KeyA'] || state.touch.left) this.angle -= 0.08;
+        if(state.keys['ArrowRight'] || state.keys['KeyD'] || state.touch.right) this.angle += 0.08;
         
-        if(state.keys['ArrowUp'] || state.keys['KeyW']) {
+        if(state.keys['ArrowUp'] || state.keys['KeyW'] || state.touch.thrust) {
             this.vX += Math.cos(this.angle) * this.accel;
             this.vY += Math.sin(this.angle) * this.accel;
             // Thruster particles
@@ -145,6 +155,39 @@ function spawnParticle(x, y, angle, color, force) {
 const player = new Player();
 window.onkeydown = e => state.keys[e.code] = true;
 window.onkeyup = e => state.keys[e.code] = false;
+
+// TOUCH CONTROLS
+canvas.addEventListener("touchstart", handleTouch);
+canvas.addEventListener("touchmove", handleTouch);
+canvas.addEventListener("touchend", stopTouch);
+
+function handleTouch(e){
+    e.preventDefault();
+
+    const touch = e.touches[0];
+    const x = touch.clientX;
+    const y = touch.clientY;
+
+    state.touch.left = false;
+    state.touch.right = false;
+    state.touch.thrust = false;
+
+    if(x < w/2) state.touch.left = true;
+    else state.touch.right = true;
+
+    if(y < h/2) state.touch.thrust = true;
+
+    // two finger supernova
+    if(e.touches.length > 1 && state.charge >= 100){
+        player.supernova();
+    }
+}
+
+function stopTouch(){
+    state.touch.left = false;
+    state.touch.right = false;
+    state.touch.thrust = false;
+}
 
 function loop() {
     if(state.gameOver) return;
